@@ -1,0 +1,184 @@
+---
+title: "Exploratory Data Project Pt 1"
+author: "Maggie McGlenn"
+date: "Date"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=6)
+# feel free to change fig.height or fig.width here or in specific chunk headings. 
+```
+
+
+```{r}
+# load packages - add any you would like
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(gridExtra)
+library(knitr)
+library(corrplot)
+library(ellipse)
+```
+
+## Abstract 
+
+A 150 word abstract.
+
+
+\newpage
+
+### Background and Significance   
+
+There are many factors which effect plant growth. 
+
+### Data  
+
+Within a climate zone there are 5 trees and within each tree there are three strata and in each strata one branch was randomly selected and on each branch 5 leafs were randomly selected.
+variables relating to leaf are level 1 (Length, Width, Area, petiole width, petiole length, herbivory), variables relating to branch are level 2 (strata, branch length, branch), and variables relating to the whole tree are level 3 (climate zone, tree height, tree girth, species).
+
+Type data section here. Include captions with tables and graphs. Examples:  
+
+```{r}
+leaf <- read.csv("https://raw.githubusercontent.com/proback/BeyondMLR/master/data/mudamalai.csv")
+leaf<- leaf%>% mutate(Species=factor(Species),
+                      Zone=factor(Zone),
+                      Strata= factor(Strata),
+                      Branch= factor(Branch))
+leaf<- leaf[,-c(1)]
+T1 <- head(leaf %>% select(where(is.numeric)),10)       
+kable(T1, caption="First 10 rows of numeric variables in dataset")
+```
+
+```{r, fig.cap= "Correlation between numeric variables" }
+Corr <- cor(select_if(leaf, is.numeric), use="complete.obs") 
+corrplot.mixed(Corr)
+```
+
+ 
+```{r, fig.cap= "Distribution of the length, width, and area of leaves"}
+lengthdist<- ggplot(data=leaf,aes(x=Length)) + 
+  geom_histogram( fill = "white",
+                 color = "black") + 
+  theme_bw() + 
+  xlab("Length") + ylab("Frequency") + labs(title="(a)")
+
+WidthDist <- ggplot(data=leaf,aes(x=Width)) + 
+  geom_histogram( fill = "white", 
+                 color = "black") + 
+  theme_bw() + 
+  xlab("Width") + ylab("") + labs(title="(b)")
+AreaDist <- ggplot(data=leaf,aes(x=Area)) + 
+  geom_histogram(fill = "white", 
+                 color = "black ") + 
+  theme_bw() + 
+  xlab("Area") + ylab("") + labs(title="(c)")
+grid.arrange(lengthdist, WidthDist, AreaDist,ncol=3)
+```
+
+```{r, fig.cap="Relationship between tree height and tree girth by species of tree"}
+ggplot(leaf, aes(x=Tree.girth, y=Tree.height, color=Species))+geom_point()+
+  geom_smooth(method="lm", se=FALSE)+
+  theme_bw()+
+  xlab("Tree Girth")+
+  ylab("Tree Height")
+```
+
+
+
+```{r, fig.cap="Relation between the strata where a branch is located and branch length"}
+ggplot(leaf, aes(x=Branch.length, y=factor(Strata)))+
+  geom_boxplot()+
+  theme_bw()+
+  ylab("Strata")+
+  xlab("Branch Length") 
+```
+
+
+
+```{r, fig.cap= "Distribution of leaf area for each species by climate zone"}
+ggplot(leaf, aes(x=Species, y=Area, color=Zone))+
+  geom_boxplot()+
+   ylab("Leaf Area")+
+  xlab("Species")+
+  theme_bw()
+```
+
+### Methods  
+
+Type methods section here. Write your final model in equation form, like this:
+
+
+\begin{align*}
+Y_{ij} & = [\alpha_{0}+\alpha_{1}\textrm{Orch}_{i}+\beta_{0}\textrm{LargeEns}_{ij}+\beta_{1}\textrm{Orch}_{i}\textrm{LargeEns}_{ij}] \\
+    & + [u_{i}+v_{i}\textrm{LargeEns}_{ij}+\epsilon_{ij}]
+\end{align*}
+
+where,
+
+$$
+\left[ \begin{array}{c}
+            u_{i} \\ v_{i}
+          \end{array}  \right] \sim N \left( \left[
+          \begin{array}{c}
+            0 \\ 0
+          \end{array} \right], \left[
+          \begin{array}{cc}
+            \sigma_{u}^{2} & \rho_{uv}\sigma_{u}\sigma_v \\
+            \rho_{uv}\sigma_{u}\sigma_v & \sigma_{v}^{2}
+          \end{array} \right] \right) 
+$$
+
+and $\epsilon_{ij}\sim N(0,\sigma^2)$.   
+
+
+
+### Results  
+
+Write your results section here. Include the fixed and random effects tables, as below. 
+
+```{r}
+music <- music %>% mutate(orch = as.numeric(instrument=="orchestral instrument"),
+                          large = as.numeric(perform_type=="Large Ensemble"))
+M <- lmer(na ~ orch + large + orch:large +
+  (large|id), data = music)
+
+m2<- lmer(Area~ Zone+Species)
+
+```
+
+```{r, fig.cap="Variance and Covariance Estimates for Random Effects"}
+kable(as.data.frame(VarCorr(M)))
+```
+
+
+```{r, fig.cap="Estimates of Fixed Effects"}
+kable(summary(M)$coefficients)
+```
+
+
+### Discussion and Conclusions   
+
+
+Type discussion section. 
+
+\newpage 
+
+### References  (5 points)
+
+References in APA format. For example:
+
+Sadler, M. E., & Miller, C. J. (2010). Performance anxiety: A longitudinal study of the roles of personality and experience in musicians. Social Psychological and Personality Science, 1(3), 280-287.
+
+Lin, M. C. (2019). An Investigation Of Music Performance Anxiety In Taiwanese Pianists, Vocalists, String And Wind Instrumentalists At The College Level.
+
+Stoeber, J., & Eismann, U. (2007). Perfectionism in young musicians: Relations with motivation, effort, achievement, and distress. Personality and Individual Differences, 43(8), 2182-2192.
+
+Roback, P., & Legler, J. (2021). Beyond Multiple Linear Regression: Applied Generalized Linear Models And Multilevel Models in R. CRC Press.
+
+
+
+\newpage
+
+## Appendix (optional)
